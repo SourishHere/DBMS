@@ -41,7 +41,7 @@ class VehicleServiceAppTests(unittest.TestCase):
     def test_dashboard_loads_with_demo_counts(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Dashboard", response.data)
+        self.assertIn(b"<h1>Dashboard</h1>", response.data)
         self.assertIn(b"Arun Kumar", response.data)
 
     def test_tables_page_loads(self):
