@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1]
-SCHEMA = BASE / "sqlite_schema.sql"
+SCHEMA = BASE / "scripts" / "sqlite_schema.sql"
 TEMP_DIR = tempfile.TemporaryDirectory(prefix="vehicle-service-tests-")
 os.environ["VEHICLE_DB_PATH"] = str(Path(TEMP_DIR.name) / "test_vehicle_service.db")
 sys.path.insert(0, str(BASE))
@@ -216,7 +216,8 @@ class DemoDatabaseSetupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="vehicle-setup-test-") as temp:
             root = Path(temp)
             shutil.copy2(BASE / "setup_demo_db.py", root / "setup_demo_db.py")
-            shutil.copy2(SCHEMA, root / "sqlite_schema.sql")
+             (root / "scripts").mkdir()
+            shutil.copy2(SCHEMA, root / "scripts" / "sqlite_schema.sql")
             db_path = root / "instance" / "vehicle_service.db"
 
             first = subprocess.run(
