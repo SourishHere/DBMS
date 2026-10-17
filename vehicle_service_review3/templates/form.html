@@ -25,7 +25,7 @@
           {% elif col.name|lower in ['notes','address','description','comments','details','specialization'] %}
             <textarea id="{{ col.name }}" name="{{ col.name }}" rows="3" {% if col.notnull %}required{% endif %}>{{ record.get(col.name, '') or '' }}</textarea>
           {% else %}
-            <input id="{{ col.name }}" name="{{ col.name }}" type="text" value="{{ record.get(col.name, '') or '' }}" {% if col.notnull %}required{% endif %} {% if col.name|lower == 'email' %}type="email"{% endif %}>
+            <input id="{{ col.name }}" name="{{ col.name }}" type="{% if col.name|lower == 'email' %}email{% else %}text{% endif %}" value="{{ record.get(col.name, '') or '' }}" {% if col.notnull %}required{% endif %}>
           {% endif %}
           {% if col.default is not none %}<small>Database default: {{ col.default }}</small>{% endif %}
         </div>
