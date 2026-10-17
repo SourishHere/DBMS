@@ -231,7 +231,7 @@ class DemoDatabaseSetupTests(unittest.TestCase):
 
             refused = subprocess.run(
                 [sys.executable, str(root / "setup_demo_db.py")],
-                input="NO\\n",
+                input="NO\n",
                 text=True,
                 capture_output=True,
                 check=False,
@@ -243,7 +243,7 @@ class DemoDatabaseSetupTests(unittest.TestCase):
 
             recreated = subprocess.run(
                 [sys.executable, str(root / "setup_demo_db.py")],
-                input="YES\\n",
+                input="YES\n",
                 text=True,
                 capture_output=True,
                 check=False,
