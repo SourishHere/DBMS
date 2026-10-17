@@ -2,9 +2,9 @@
 {% block title %}{{ mode|capitalize }} {{ table }}{% endblock %}
 {% block page_title %}{{ mode|capitalize }} record{% endblock %}
 {% block content %}
-<div class="form-layout">
+<div class="form-layout single-form">
   <div class="form-main panel">
-    <div class="form-heading"><div class="table-symbol large">▤</div><div><h2>{{ mode|capitalize }} {{ table }} record</h2><p>Fields marked with * are required by the database schema.</p></div></div>
+    <div class="form-heading"><div class="table-symbol large">▤</div><div><h2>{{ mode|capitalize }} {{ table }} record</h2><p>Fields marked with * are required.</p></div></div>
     <form method="post" class="record-form">
       {% for col in columns %}
         {% if not (mode == 'edit' and col.pk) and not (mode == 'add' and col.identity) %}
@@ -15,7 +15,6 @@
               <option value="">Choose related record{% if not col.notnull %} (optional){% endif %}</option>
               {% for option in col.options %}<option value="{{ option.value }}" {% if record.get(col.name, '')|string == option.value|string %}selected{% endif %}>{{ option.value }} — {{ option.label }}</option>{% endfor %}
             </select>
-            <small>References {{ col.fk[0] }}.{{ col.fk[1] }}</small>
           {% elif 'DATE' in col.type or col.name.lower().endswith('_date') or col.name.lower() == 'last_updated' %}
             <input id="{{ col.name }}" name="{{ col.name }}" type="date" value="{{ record.get(col.name, '')|date_input }}" {% if col.notnull %}required{% endif %}>
           {% elif 'INT' in col.type %}
@@ -27,13 +26,12 @@
           {% else %}
             <input id="{{ col.name }}" name="{{ col.name }}" type="{% if col.name|lower == 'email' %}email{% else %}text{% endif %}" value="{{ record.get(col.name, '') or '' }}" {% if col.notnull %}required{% endif %}>
           {% endif %}
-          {% if col.default is not none %}<small>Database default: {{ col.default }}</small>{% endif %}
+          {% if col.default is not none %}<small>Default: {{ col.default }}</small>{% endif %}
         </div>
         {% endif %}
       {% endfor %}
       <div class="form-actions"><button class="button button-primary" type="submit">{{ 'Save changes' if mode == 'edit' else 'Create record' }}</button><a class="button button-quiet" href="{{ url_for('table_page', table=table) }}">Cancel</a></div>
     </form>
   </div>
-  <aside class="form-aside"><div class="aside-icon">✓</div><h3>Database validation</h3><p>The connected database validates primary keys, unique values, foreign keys, CHECK constraints and required fields when you save.</p><div class="aside-note"><strong>Tip for your review</strong><span>Try a duplicate email or an invalid rating to demonstrate that constraints protect data integrity.</span></div></aside>
 </div>
 {% endblock %}
