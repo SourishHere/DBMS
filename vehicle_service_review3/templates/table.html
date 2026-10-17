@@ -2,9 +2,8 @@
 {% block title %}{{ table }}{% endblock %}
 {% block page_title %}{{ table }}{% endblock %}
 {% block content %}
-<div class="page-intro"><div><h2>Manage {{ table }}</h2><p>Search across the table or filter by individual fields. Values are written to the connected database.</p></div>{% if pk %}<a class="button button-primary" href="{{ url_for('add_record', table=table) }}">＋ Add record</a>{% endif %}</div>
+<div class="page-intro"><div><h2>Manage {{ table }}</h2><p>Enter values in one or more fields below to filter records.</p></div>{% if pk %}<a class="button button-primary" href="{{ url_for('add_record', table=table) }}">＋ Add record</a>{% endif %}</div>
 <div class="toolbar panel">
-  <form class="search-form" method="get"><span class="search-symbol">⌕</span><input name="q" value="{{ search }}" placeholder="Search across this table..." aria-label="Search all fields">{% for col in columns %}{% if column_filters[col] %}<input type="hidden" name="filter_{{ col }}" value="{{ column_filters[col] }}">{% endif %}{% endfor %}<button class="button button-dark" type="submit">Search</button></form>
   <div class="toolbar-meta"><span>{{ total }} record(s) shown</span>{% if fk_error_count %}<span class="badge badge-red">{{ fk_error_count }} FK issue(s)</span>{% endif %}</div>
 </div>
 <details class="column-search panel">
