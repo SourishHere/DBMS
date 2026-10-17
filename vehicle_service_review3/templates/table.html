@@ -2,7 +2,7 @@
 {% block title %}{{ table }}{% endblock %}
 {% block page_title %}{{ table }}{% endblock %}
 {% block content %}
-<div class="page-intro"><div><h2>Manage {{ table }}</h2><p>Search and manage live records. Values are written to the connected SQLite database.</p></div>{% if pk %}<a class="button button-primary" href="{{ url_for('add_record', table=table) }}">＋ Add record</a>{% endif %}</div>
+<div class="page-intro"><div><h2>Manage {{ table }}</h2><p>Search and manage live records. Values are written to the connected database.</p></div>{% if pk %}<a class="button button-primary" href="{{ url_for('add_record', table=table) }}">＋ Add record</a>{% endif %}</div>
 <div class="toolbar panel">
   <form class="search-form" method="get"><span class="search-symbol">⌕</span><input name="q" value="{{ search }}" placeholder="Search across this table..." aria-label="Search records"><button class="button button-dark" type="submit">Search</button>{% if search %}<a class="button button-quiet" href="{{ url_for('table_page', table=table) }}">Clear</a>{% endif %}</form>
   <div class="toolbar-meta"><span>{{ total }} record(s) shown</span>{% if fk_error_count %}<span class="badge badge-red">{{ fk_error_count }} FK issue(s)</span>{% endif %}</div>
@@ -15,5 +15,5 @@
 </tbody></table></div>
 {% else %}<div class="empty-state"><div class="empty-icon">▤</div><h3>No matching records</h3><p>Try a different search, or add a new record.</p>{% if pk %}<a class="button button-primary" href="{{ url_for('add_record', table=table) }}">＋ Add record</a>{% endif %}</div>{% endif %}
 </div>
-<div class="hint-line"><span class="hint-dot"></span> Showing up to 250 records. Foreign-key constraints and table rules are enforced by SQLite.</div>
+<div class="hint-line"><span class="hint-dot"></span> Showing up to 250 records. Foreign-key constraints and table rules are enforced by the connected database.</div>
 {% endblock %}
