@@ -249,8 +249,18 @@ def add_record(table):
             name = col["name"]
             raw_value = request.form.get(name, "").strip()
             if col.get("identity") and raw_value == "":
+                pk_name = col["name"]
+                data[pk_name] = conn.execute(
+                    f"SELECT COALESCE(MAX({safe_identifier(pk_name)}), 0) + 1 "
+                    f"FROM {safe_identifier(table)}"
+                ).fetchone()[0]
                 continue
             if col["pk"] and "INT" in (col["type"] or "").upper() and raw_value == "":
+                pk_name = col["name"]
+                data[pk_name] = conn.execute(
+                    f"SELECT COALESCE(MAX({safe_identifier(pk_name)}), 0) + 1 "
+                    f"FROM {safe_identifier(table)}"
+                ).fetchone()[0]
                 continue
             if raw_value == "" and col["dflt_value"] is not None:
                 continue
