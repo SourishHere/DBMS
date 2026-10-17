@@ -175,20 +175,42 @@ def table_page(table):
         cols = columns_for(conn, table)
         pk = primary_key(cols)
         colnames = [c["name"] for c in cols]
-        if search:
-            searchable = [c for c in cols if any(t in (c["type"] or "").upper() for t in ("CHAR", "TEXT", "CLOB", "INT", "REAL", "NUM", "DATE", "FLOAT"))]
-            if searchable:
-                where = " OR ".join(f"CAST({safe_identifier(c['name'])} AS TEXT) LIKE ?" for c in searchable)
-                params = [f"%{search}%"] * len(searchable)
-                rows = conn.execute(f"SELECT * FROM {safe_identifier(table)} WHERE {where} LIMIT 250", params).fetchall()
-            else:
-                rows = conn.execute(f"SELECT * FROM {safe_identifier(table)} LIMIT 250").fetchall()
-        else:
-            rows = conn.execute(f"SELECT * FROM {safe_identifier(table)} LIMIT 250").fetchall()
-        fk_errors = foreign_key_issue_count(conn)
-    return render_template("table.html", table=table, columns=colnames, rows=rows,
-                           pk=pk, search=search, total=len(rows), fk_error_count=fk_errors)
+        column_filters = {
+            name: request.args.get(f"filter_{name}", "").strip()
+            for name in colnames
+        }
+        active_filters = [(name, value) for name, value in column_filters.items() if value]
+        where_clauses = []
+        params = []
 
+        if search:
+            searchable = [
+                c for c in cols
+                if any(t in (c["type"] or "").upper()
+                       for t in ("CHAR", "TEXT", "CLOB", "INT", "REAL", "NUM", "DATE", "FLOAT"))
+            ]
+            if searchable:
+                where_clauses.append("(" + " OR ".join(
+                    f"CAST({safe_identifier(c['name'])} AS TEXT) LIKE ?" for c in searchable
+                ) + ")")
+                params.extend([f"%{search}%"] * len(searchable))
+
+        for name, value in active_filters:
+            where_clauses.append(f"CAST({safe_identifier(name)} AS TEXT) LIKE ?")
+            params.append(f"%{value}%")
+
+        sql = f"SELECT * FROM {safe_identifier(table)}"
+        if where_clauses:
+            sql += " WHERE " + " AND ".join(where_clauses)
+        sql += " LIMIT 250"
+        rows = conn.execute(sql, params).fetchall()
+        fk_errors = foreign_key_issue_count(conn)
+    return render_template(
+        "table.html", table=table, columns=colnames, rows=rows,
+        pk=pk, search=search, column_filters=column_filters,
+        has_column_filters=bool(active_filters), total=len(rows),
+        fk_error_count=fk_errors
+    )
 
 def render_record_form(table, mode, record=None):
     with connect_db() as conn:
