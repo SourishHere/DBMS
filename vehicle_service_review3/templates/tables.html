@@ -2,7 +2,7 @@
 {% block title %}Tables{% endblock %}
 {% block page_title %}Tables{% endblock %}
 {% block content %}
-<div class="page-intro"><div><h2>Your relational schema</h2><p>Choose a table to browse records and perform CRUD operations. Counts are read from SQLite.</p></div></div>
+<div class="page-intro"><div><h2>Your relational schema</h2><p>Choose a table to browse records and perform CRUD operations. Counts are read directly from the database.</p></div></div>
 <div class="table-cards">
 {% for item in items %}
   <a class="table-card" href="{{ url_for('table_page', table=item.name) }}">
