@@ -34,6 +34,14 @@ The website's separate `sqlite_schema.sql` contains the SQLite-compatible versio
 
 Tables with composite primary keys (such as `SERVICE_PART`) can be viewed and searched; generic edit/delete is disabled for safety.
 
+## Automated regression tests
+
+From this folder, run:
+
+    python -m unittest discover -s tests -v
+
+The test suite checks page rendering, every table page, searching, create/update/delete behavior, unique and foreign-key constraints, CHECK constraints, date/email form inputs, reports, health checks, and demo-database setup/recreation. GitHub Actions runs the suite on relevant pushes and pull requests.
+
 ## Troubleshooting
 
 - **Flask missing:** run `python -m pip install -r requirements.txt`.
