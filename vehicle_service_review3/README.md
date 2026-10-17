@@ -18,7 +18,7 @@ The setup script creates `instance/vehicle_service.db` using `schema.sql`, inclu
 
 The file `oracle_schema.sql` is the **Oracle SQL*Plus version** for DBMS coursework. Run it in Oracle SQL*Plus or another Oracle SQL client:
 
-    @schema.sql
+    @oracle_schema.sql
 
 It creates the Oracle tables, the `CustomerVehicleAppointment` view, and demo rows. It is not intended to be run against SQLite.
 
