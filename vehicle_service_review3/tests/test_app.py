@@ -41,8 +41,8 @@ class VehicleServiceAppTests(unittest.TestCase):
     def test_dashboard_loads_with_demo_counts(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Dashboard overview", response.data)
-        self.assertIn(b"Ravi Kumar", response.data)
+        self.assertIn(b"Dashboard", response.data)
+        self.assertIn(b"Arun Kumar", response.data)
 
     def test_tables_page_loads(self):
         response = self.client.get("/tables")
@@ -64,9 +64,9 @@ class VehicleServiceAppTests(unittest.TestCase):
                 self.assertEqual(response.status_code, 200, table)
 
     def test_table_search(self):
-        response = self.client.get("/table/CUSTOMER?q=Ravi")
+        response = self.client.get("/table/CUSTOMER?q=Arun")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Ravi Kumar", response.data)
+        self.assertIn(b"Arun Kumar", response.data)
         self.assertNotIn(b"Priya Sharma", response.data)
 
     def test_add_and_edit_customer(self):
@@ -112,7 +112,7 @@ class VehicleServiceAppTests(unittest.TestCase):
             data={
                 "Customer_Name": "Duplicate Email",
                 "Phone": "9876500002",
-                "Email": "ravi@example.com",
+                "Email": "arun@gmail.com",
                 "Address": "Vellore",
             },
         )
@@ -120,7 +120,7 @@ class VehicleServiceAppTests(unittest.TestCase):
         self.assertIn(b"Could not add record", response.data)
         with self.db() as conn:
             count = conn.execute(
-                "SELECT COUNT(*) FROM CUSTOMER WHERE Email = 'ravi@example.com'"
+                "SELECT COUNT(*) FROM CUSTOMER WHERE Email = 'arun@gmail.com'"
             ).fetchone()[0]
         self.assertEqual(count, 1)
 
@@ -130,7 +130,7 @@ class VehicleServiceAppTests(unittest.TestCase):
             data={
                 "Registration_No": "TN99ZZ9999",
                 "Customer_ID": "99999",
-                "Model_ID": "1",
+                "Model_ID": "201",
                 "Manufacture_Year": "2024",
                 "Mileage": "1000",
             },
@@ -147,8 +147,8 @@ class VehicleServiceAppTests(unittest.TestCase):
         response = self.client.post(
             "/table/FEEDBACK/add",
             data={
-                "Service_ID": "1",
-                "Customer_ID": "1",
+                "Service_ID": "801",
+                "Customer_ID": "101",
                 "Rating": "6",
                 "Comments": "Invalid rating",
             },
@@ -162,13 +162,13 @@ class VehicleServiceAppTests(unittest.TestCase):
         self.assertEqual(count, 0)
 
     def test_referenced_customer_cannot_be_deleted(self):
-        response = self.client.post("/table/CUSTOMER/delete/1")
+        response = self.client.post("/table/CUSTOMER/delete/101")
         self.assertEqual(response.status_code, 302)
         with self.db() as conn:
             row = conn.execute(
-                "SELECT Customer_Name FROM CUSTOMER WHERE Customer_ID = 1"
+                "SELECT Customer_Name FROM CUSTOMER WHERE Customer_ID = 101"
             ).fetchone()
-        self.assertEqual(row["Customer_Name"], "Ravi Kumar")
+        self.assertEqual(row["Customer_Name"], "Arun Kumar")
 
     def test_composite_primary_key_table_is_read_only_for_generic_actions(self):
         response = self.client.get("/table/SERVICE_PART")
@@ -229,7 +229,7 @@ class DemoDatabaseSetupTests(unittest.TestCase):
             self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
             self.assertTrue(db_path.exists())
             with sqlite3.connect(db_path) as conn:
-                self.assertEqual(conn.execute("SELECT COUNT(*) FROM CUSTOMER").fetchone()[0], 2)
+                self.assertEqual(conn.execute("SELECT COUNT(*) FROM CUSTOMER").fetchone()[0], 10)
                 conn.execute(
                     "INSERT INTO CUSTOMER (Customer_Name, Phone, Email) VALUES (?, ?, ?)",
                     ("Preserve Me", "9876500099", "preserve@example.com"),
