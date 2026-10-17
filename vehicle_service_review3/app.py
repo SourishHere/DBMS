@@ -1,52 +1,218 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, abort
-import sqlite3
 from pathlib import Path
+from datetime import date, datetime
+from decimal import Decimal
 import os
 import re
+import sqlite3
+
+try:
+    import oracledb
+except ImportError:
+    oracledb = None
 
 ROOT = Path(__file__).resolve().parent
 INSTANCE = ROOT / "instance"
 INSTANCE.mkdir(exist_ok=True)
+DB_BACKEND = os.environ.get("DB_BACKEND", "sqlite").strip().lower()
 DB_PATH = Path(os.environ.get("VEHICLE_DB_PATH", INSTANCE / "vehicle_service.db"))
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "review3-local-demo-change-me")
 app.config["DATABASE"] = str(DB_PATH)
+app.config["DB_BACKEND"] = DB_BACKEND
+
+DB_ERRORS = (sqlite3.Error,) + ((oracledb.Error,) if oracledb else ())
+
+
+class Row(dict):
+    """Dictionary-like database row with case-insensitive column lookup."""
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return list(self.values())[key]
+        if key in self:
+            return super().__getitem__(key)
+        wanted = str(key).lower()
+        for name, value in self.items():
+            if str(name).lower() == wanted:
+                return value
+        raise KeyError(key)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+
+class CursorAdapter:
+    def __init__(self, cursor, oracle=False):
+        self.cursor = cursor
+        self.oracle = oracle
+        self.description = cursor.description
+
+    def execute(self, sql, params=()):
+        if self.oracle:
+            sql = oracle_sql(sql)
+            self.cursor.execute(sql, list(params or ()))
+        else:
+            self.cursor.execute(sql, params or ())
+        self.description = self.cursor.description
+        return self
+
+    def _row(self, values):
+        if not self.oracle:
+            return values
+        names = [item[0] for item in (self.description or ())]
+        return Row(zip(names, values))
+
+    def fetchone(self):
+        values = self.cursor.fetchone()
+        return self._row(values) if values is not None else None
+
+    def fetchall(self):
+        return [self._row(values) for values in self.cursor.fetchall()]
+
+
+def oracle_sql(sql):
+    """Translate the small SQLite SQL subset used by this UI into Oracle SQL."""
+    sql = re.sub(r'CAST\(([^()]+)\s+AS\s+TEXT\)', r'TO_CHAR(\1)', sql, flags=re.IGNORECASE)
+    sql = re.sub(r'\bLIMIT\s+(\d+)\b', r'FETCH FIRST \1 ROWS ONLY', sql, flags=re.IGNORECASE)
+    sql = re.sub(r'\?', lambda match, counter=iter(range(1, 10000)): ':' + str(next(counter)), sql)
+    return sql
+
+
+class ConnectionAdapter:
+    def __init__(self):
+        self.oracle = DB_BACKEND == "oracle"
+        if self.oracle:
+            if oracledb is None:
+                raise RuntimeError("Oracle mode requires the oracledb package. Run: pip install -r requirements.txt")
+            user = os.environ.get("ORACLE_USER")
+            password = os.environ.get("ORACLE_PASSWORD")
+            dsn = os.environ.get("ORACLE_DSN")
+            if not all((user, password, dsn)):
+                raise RuntimeError("Set DB_BACKEND=oracle plus ORACLE_USER, ORACLE_PASSWORD, and ORACLE_DSN environment variables.")
+            self.raw = oracledb.connect(user=user, password=password, dsn=dsn)
+        else:
+            self.raw = sqlite3.connect(str(DB_PATH))
+            self.raw.row_factory = sqlite3.Row
+            self.raw.execute("PRAGMA foreign_keys = ON")
+
+    def execute(self, sql, params=()):
+        if self.oracle:
+            return CursorAdapter(self.raw.cursor(), oracle=True).execute(sql, params)
+        return CursorAdapter(self.raw.cursor(), oracle=False).execute(sql, params)
+
+    def commit(self):
+        self.raw.commit()
+
+    def rollback(self):
+        self.raw.rollback()
+
+    def close(self):
+        self.raw.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        try:
+            if exc_type:
+                self.rollback()
+            else:
+                self.commit()
+        finally:
+            self.close()
+        return False
+
 
 def connect_db():
-    conn = sqlite3.connect(app.config["DATABASE"])
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+    return ConnectionAdapter()
+
 
 def get_tables(conn):
-    rows = conn.execute("""
-        SELECT name FROM sqlite_master
-        WHERE type='table' AND name NOT LIKE 'sqlite_%'
-        ORDER BY name
-    """).fetchall()
+    if conn.oracle:
+        rows = conn.execute("SELECT table_name AS name FROM user_tables ORDER BY table_name").fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT name FROM sqlite_master
+            WHERE type='table' AND name NOT LIKE 'sqlite_%'
+            ORDER BY name
+        """).fetchall()
     return [r["name"] for r in rows]
 
+
 def valid_table(conn, table):
-    return table in get_tables(conn)
+    return table.upper() in {name.upper() for name in get_tables(conn)}
+
 
 def columns_for(conn, table):
     if not valid_table(conn, table):
         abort(404)
-    return conn.execute(f'PRAGMA table_info("{table}")').fetchall()
+    if conn.oracle:
+        return conn.execute("""
+            SELECT c.column_name AS name,
+                   c.data_type AS type,
+                   CASE WHEN c.nullable = 'N' THEN 1 ELSE 0 END AS notnull,
+                   c.data_default AS dflt_value,
+                   CASE WHEN pk.column_name IS NOT NULL THEN 1 ELSE 0 END AS pk,
+                   CASE WHEN ident.column_name IS NOT NULL THEN 1 ELSE 0 END AS identity
+            FROM user_tab_columns c
+            LEFT JOIN (
+                SELECT cc.table_name, cc.column_name
+                FROM user_constraints co
+                JOIN user_cons_columns cc ON cc.constraint_name = co.constraint_name
+                WHERE co.constraint_type = 'P'
+            ) pk ON pk.table_name = c.table_name AND pk.column_name = c.column_name
+            LEFT JOIN user_tab_identity_cols ident
+              ON ident.table_name = c.table_name AND ident.column_name = c.column_name
+            WHERE c.table_name = :1
+            ORDER BY c.column_id
+        """, (table.upper(),)).fetchall()
+    rows = conn.execute(f'PRAGMA table_info("{table}")').fetchall()
+    normalized = []
+    for col in rows:
+        normalized.append(Row({
+            "name": col["name"], "type": col["type"] or "TEXT",
+            "notnull": col["notnull"], "pk": col["pk"],
+            "dflt_value": col["dflt_value"],
+            "identity": bool(col["pk"] and "INT" in (col["type"] or "").upper())
+        }))
+    return normalized
+
 
 def primary_key(columns):
     pks = [c for c in columns if c["pk"]]
     return pks[0]["name"] if len(pks) == 1 else None
 
+
 def safe_identifier(name):
-    # Identifiers are only used after checking them against SQLite's actual schema.
-    return '"' + name.replace('"', '""') + '"'
+    return '"' + str(name).replace('"', '""') + '"'
+
 
 def table_info(conn, table):
     cols = columns_for(conn, table)
-    fks = conn.execute(f'PRAGMA foreign_key_list("{table}")').fetchall()
-    fk_map = {fk["from"]: (fk["table"], fk["to"]) for fk in fks}
+    if conn.oracle:
+        fk_rows = conn.execute("""
+            SELECT fkcols.column_name AS from_col,
+                   pkcons.table_name AS ref_table,
+                   pkcols.column_name AS ref_col
+            FROM user_constraints fk
+            JOIN user_cons_columns fkcols
+              ON fkcols.constraint_name = fk.constraint_name
+             AND fkcols.table_name = fk.table_name
+            JOIN user_constraints pkcons
+              ON pkcons.constraint_name = fk.r_constraint_name
+            JOIN user_cons_columns pkcols
+              ON pkcols.constraint_name = pkcons.constraint_name
+             AND pkcols.position = fkcols.position
+            WHERE fk.constraint_type = 'R' AND fk.table_name = :1
+        """, (table.upper(),)).fetchall()
+        fk_map = {r["from_col"]: (r["ref_table"], r["ref_col"]) for r in fk_rows}
+    else:
+        fks = conn.execute(f'PRAGMA foreign_key_list("{table}")').fetchall()
+        fk_map = {fk["from"]: (fk["table"], fk["to"]) for fk in fks}
     info = []
     for col in cols:
         info.append({
@@ -54,32 +220,66 @@ def table_info(conn, table):
             "type": (col["type"] or "TEXT").upper(),
             "notnull": bool(col["notnull"]),
             "pk": bool(col["pk"]),
+            "identity": bool(col.get("identity", False)),
             "default": col["dflt_value"],
             "fk": fk_map.get(col["name"])
         })
     return info
 
-def query_all(conn, sql, params=()):
-    return conn.execute(sql, params).fetchall()
 
 def scalar(conn, sql):
     row = conn.execute(sql).fetchone()
     return row[0] if row else 0
 
+
 def query_if_possible(conn, sql):
     try:
         return {"rows": conn.execute(sql).fetchall(), "error": None}
-    except sqlite3.Error as exc:
+    except DB_ERRORS + (RuntimeError,) as exc:
         return {"rows": [], "error": str(exc)}
+
+
+def foreign_key_issue_count(conn):
+    if conn.oracle:
+        # Oracle enforces enabled foreign-key constraints during DML.
+        return scalar(conn, "SELECT COUNT(*) FROM user_constraints WHERE constraint_type = 'R' AND status = 'DISABLED'")
+    return len(conn.execute("PRAGMA foreign_key_check").fetchall())
+
+
+def form_value(value, col, oracle):
+    if value == "":
+        return None
+    kind = (col["type"] or "").upper()
+    if oracle and "DATE" in kind:
+        return datetime.strptime(value[:10], "%Y-%m-%d").date()
+    if oracle and any(t in kind for t in ("NUMBER", "FLOAT", "BINARY_FLOAT", "BINARY_DOUBLE")):
+        try:
+            return Decimal(value)
+        except Exception:
+            return value
+    return value
+
+
+@app.template_filter("date_input")
+def date_input(value):
+    if value is None:
+        return ""
+    if isinstance(value, (date, datetime)):
+        return value.strftime("%Y-%m-%d")
+    text = str(value)
+    return text[:10] if re.match(r"^\d{4}-\d{2}-\d{2}", text) else text
+
 
 @app.context_processor
 def inject_global():
     try:
         with connect_db() as conn:
             tables = get_tables(conn)
-    except sqlite3.Error:
+    except (DB_ERRORS + (RuntimeError,)) as exc:
+        app.logger.warning("Database navigation unavailable: %s", exc)
         tables = []
-    return {"nav_tables": tables}
+    return {"nav_tables": tables, "db_backend": DB_BACKEND}
+
 
 @app.route("/")
 def index():
@@ -89,15 +289,15 @@ def index():
         for table in tables:
             try:
                 counts[table] = scalar(conn, f"SELECT COUNT(*) FROM {safe_identifier(table)}")
-            except sqlite3.Error:
+            except DB_ERRORS:
                 counts[table] = 0
         customer_count = counts.get("CUSTOMER", 0)
         vehicle_count = counts.get("VEHICLE", 0)
         appointment_count = counts.get("APPOINTMENT", 0)
         completed = 0
         if "APPOINTMENT" in tables:
-            cols = [c["name"] for c in columns_for(conn, "APPOINTMENT")]
-            if "Status" in cols:
+            cols = [c["name"].lower() for c in columns_for(conn, "APPOINTMENT")]
+            if "status" in cols:
                 completed = scalar(conn, "SELECT COUNT(*) FROM APPOINTMENT WHERE Status = 'Completed'")
         recent = query_if_possible(conn, """
             SELECT a.Appointment_ID, a.Appointment_Date, a.Status,
@@ -106,10 +306,11 @@ def index():
             JOIN VEHICLE v ON a.Vehicle_ID = v.Vehicle_ID
             JOIN CUSTOMER c ON v.Customer_ID = c.Customer_ID
             ORDER BY a.Appointment_ID DESC LIMIT 6
-        """) if {"APPOINTMENT","VEHICLE","CUSTOMER"}.issubset(set(tables)) else {"rows": [], "error": "Expected appointment tables are not present."}
+        """) if {"APPOINTMENT", "VEHICLE", "CUSTOMER"}.issubset(set(tables)) else {"rows": [], "error": "Expected appointment tables are not present."}
     return render_template("index.html", counts=counts, customer_count=customer_count,
                            vehicle_count=vehicle_count, appointment_count=appointment_count,
                            completed=completed, recent=recent)
+
 
 @app.route("/tables")
 def tables_page():
@@ -123,6 +324,7 @@ def tables_page():
                           "pk": primary_key(cols)})
     return render_template("tables.html", items=items)
 
+
 @app.route("/table/<table>")
 def table_page(table):
     search = request.args.get("q", "").strip()
@@ -133,8 +335,7 @@ def table_page(table):
         pk = primary_key(cols)
         colnames = [c["name"] for c in cols]
         if search:
-            # Search only textual and numeric values; parameterized values prevent SQL injection.
-            searchable = [c for c in cols if any(t in (c["type"] or "").upper() for t in ("CHAR","TEXT","CLOB","INT","REAL","NUM","DATE"))]
+            searchable = [c for c in cols if any(t in (c["type"] or "").upper() for t in ("CHAR", "TEXT", "CLOB", "INT", "REAL", "NUM", "DATE", "FLOAT"))]
             if searchable:
                 where = " OR ".join(f"CAST({safe_identifier(c['name'])} AS TEXT) LIKE ?" for c in searchable)
                 params = [f"%{search}%"] * len(searchable)
@@ -143,18 +344,17 @@ def table_page(table):
                 rows = conn.execute(f"SELECT * FROM {safe_identifier(table)} LIMIT 250").fetchall()
         else:
             rows = conn.execute(f"SELECT * FROM {safe_identifier(table)} LIMIT 250").fetchall()
-        fk_errors = conn.execute("PRAGMA foreign_key_check").fetchall()
+        fk_errors = foreign_key_issue_count(conn)
     return render_template("table.html", table=table, columns=colnames, rows=rows,
-                           pk=pk, search=search, total=len(rows), fk_error_count=len(fk_errors))
+                           pk=pk, search=search, total=len(rows), fk_error_count=fk_errors)
+
 
 def render_record_form(table, mode, record=None):
     with connect_db() as conn:
         if not valid_table(conn, table):
             abort(404)
         cols = table_info(conn, table)
-        if record is None:
-            record = {}
-        # Pull valid options for foreign keys so users can choose existing parent records.
+        record = record or {}
         for col in cols:
             col["options"] = []
             if col["fk"]:
@@ -168,9 +368,10 @@ def render_record_form(table, mode, record=None):
                         f"SELECT {safe_identifier(ref_col)} AS value, {safe_identifier(label_col)} AS label "
                         f"FROM {safe_identifier(ref_table)} ORDER BY 2 LIMIT 500"
                     ).fetchall()
-                except sqlite3.Error:
+                except DB_ERRORS:
                     col["options"] = []
     return render_template("form.html", table=table, mode=mode, columns=cols, record=record)
+
 
 @app.route("/table/<table>/add", methods=["GET", "POST"])
 def add_record(table):
@@ -183,14 +384,18 @@ def add_record(table):
         data = {}
         for col in cols:
             name = col["name"]
-            value = request.form.get(name, "").strip()
-            if col["pk"] and "INT" in (col["type"] or "").upper() and value == "":
+            raw_value = request.form.get(name, "").strip()
+            if col.get("identity") and raw_value == "":
                 continue
-            if value == "" and col["default"] is not None:
+            if col["pk"] and "INT" in (col["type"] or "").upper() and raw_value == "":
                 continue
-            if value == "" and not col["notnull"] and not col["pk"]:
-                value = None
-            data[name] = value
+            if raw_value == "" and col["dflt_value"] is not None:
+                continue
+            value = form_value(raw_value, col, conn.oracle)
+            if value is None and not col["notnull"] and not col["pk"]:
+                data[name] = None
+            else:
+                data[name] = value
         if not data:
             flash("Please enter values for the record.", "error")
             return render_record_form(table, "add")
@@ -202,9 +407,11 @@ def add_record(table):
             conn.commit()
             flash(f"Record added to {table}.", "success")
             return redirect(url_for("table_page", table=table))
-        except sqlite3.Error as exc:
+        except DB_ERRORS + (ValueError, RuntimeError) as exc:
+            conn.rollback()
             flash(f"Could not add record: {exc}", "error")
             return render_record_form(table, "add", data)
+
 
 @app.route("/table/<table>/edit/<path:key>", methods=["GET", "POST"])
 def edit_record(table, key):
@@ -224,12 +431,15 @@ def edit_record(table, key):
         data = {}
         for col in cols:
             name = col["name"]
-            if name == pk:
+            if name.lower() == pk.lower():
                 continue
-            value = request.form.get(name, "").strip()
-            if value == "" and not col["notnull"]:
-                value = None
-            data[name] = value
+            raw_value = request.form.get(name, "").strip()
+            if raw_value == "" and not col["notnull"]:
+                data[name] = None
+            elif raw_value == "" and col["dflt_value"] is not None:
+                continue
+            else:
+                data[name] = form_value(raw_value, col, conn.oracle)
         try:
             if data:
                 assignments = ", ".join(f"{safe_identifier(n)} = ?" for n in data)
@@ -238,11 +448,13 @@ def edit_record(table, key):
                 conn.commit()
             flash(f"Record updated in {table}.", "success")
             return redirect(url_for("table_page", table=table))
-        except sqlite3.Error as exc:
+        except DB_ERRORS + (ValueError, RuntimeError) as exc:
+            conn.rollback()
             flash(f"Could not update record: {exc}", "error")
             updated = dict(record)
             updated.update(data)
             return render_record_form(table, "edit", updated)
+
 
 @app.route("/table/<table>/delete/<path:key>", methods=["POST"])
 def delete_record(table, key):
@@ -257,9 +469,11 @@ def delete_record(table, key):
             conn.execute(f"DELETE FROM {safe_identifier(table)} WHERE {safe_identifier(pk)} = ?", (key,))
             conn.commit()
             flash(f"Record deleted from {table}.", "success")
-        except sqlite3.Error as exc:
+        except DB_ERRORS as exc:
+            conn.rollback()
             flash(f"Could not delete record. It may be referenced by another record. Details: {exc}", "error")
         return redirect(url_for("table_page", table=table))
+
 
 @app.route("/reports")
 def reports():
@@ -277,7 +491,7 @@ def reports():
                 JOIN SERVICE_TYPE st ON a.Service_Type_ID = st.Service_Type_ID
                 JOIN MECHANIC m ON a.Mechanic_ID = m.Mechanic_ID
                 ORDER BY a.Appointment_Date DESC
-            """, {"APPOINTMENT","VEHICLE","CUSTOMER","SERVICE_TYPE","MECHANIC"}),
+            """, {"APPOINTMENT", "VEHICLE", "CUSTOMER", "SERVICE_TYPE", "MECHANIC"}),
             ("Appointments by status (WHERE + ORDER BY)", """
                 SELECT Appointment_ID, Appointment_Date, Vehicle_ID, Status
                 FROM APPOINTMENT
@@ -292,7 +506,7 @@ def reports():
                 GROUP BY c.Customer_ID, c.Customer_Name
                 HAVING COUNT(a.Appointment_ID) > 1
                 ORDER BY Appointment_Count DESC
-            """, {"CUSTOMER","VEHICLE","APPOINTMENT"}),
+            """, {"CUSTOMER", "VEHICLE", "APPOINTMENT"}),
             ("Service record aggregates (COUNT / SUM / AVG / MAX / MIN)", """
                 SELECT COUNT(*) AS Service_Count,
                        COALESCE(SUM(Cost), 0) AS Total_Cost,
@@ -320,17 +534,31 @@ def reports():
             reports_data.append({"title": title, "rows": result["rows"], "error": result["error"], "sql": sql.strip()})
     return render_template("reports.html", reports_data=reports_data)
 
+
 @app.route("/health")
 def health():
     with connect_db() as conn:
-        return {"database": app.config["DATABASE"], "tables": get_tables(conn), "foreign_key_violations": len(conn.execute("PRAGMA foreign_key_check").fetchall())}
+        return {"database": "Oracle" if conn.oracle else str(DB_PATH),
+                "backend": DB_BACKEND,
+                "tables": get_tables(conn),
+                "foreign_key_violations": foreign_key_issue_count(conn)}
+
 
 @app.errorhandler(404)
 def not_found(error):
     return render_template("error.html", title="Not found", message="That table or record was not found."), 404
 
+
+@app.errorhandler(RuntimeError)
+def database_configuration_error(error):
+    return render_template("error.html", title="Database configuration error", message=str(error)), 500
+
+
 if __name__ == "__main__":
-    if not DB_PATH.exists():
-        print("Database file not found. Run: python setup_demo_db.py")
-    print(f"Using SQLite database: {DB_PATH}")
-    app.run(debug=True)
+    if DB_BACKEND == "oracle":
+        print("Using Oracle database backend.")
+    else:
+        if not DB_PATH.exists():
+            print("SQLite database file not found. Run: python setup_demo_db.py")
+        print(f"Using SQLite database: {DB_PATH}")
+    app.run(debug=os.environ.get("FLASK_DEBUG", "0") == "1")
