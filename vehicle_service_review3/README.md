@@ -12,17 +12,17 @@ From this folder, run:
 
 Open the forwarded port shown by Codespaces (Flask defaults to port 5000).
 
-The setup script creates `instance/vehicle_service.db` using `scripts/sqlite_schema.sql`, including the tables, view, relationships, constraints, and demo records. If you already have a demo database, the script asks before replacing it.
+The setup script creates `instance/vehicle_service.db` using `schema.sql`, including the tables, view, relationships, constraints, and the final demo records. If you already have a demo database, the script asks before replacing it.
 
 ## SQL*Plus coursework schema
 
-The file `schema.sql` is intentionally kept as the **Oracle SQL*Plus version** for DBMS coursework. Run it in Oracle SQL*Plus or another Oracle SQL client:
+The file `oracle_schema.sql` is the **Oracle SQL*Plus version** for DBMS coursework. Run it in Oracle SQL*Plus or another Oracle SQL client:
 
     @schema.sql
 
 It creates the Oracle tables, the `CustomerVehicleAppointment` view, and demo rows. It is not intended to be run against SQLite.
 
-The website's separate `scripts/sqlite_schema.sql` contains the SQLite-compatible version used by the Flask application. Keeping these files separate allows the website to run without Oracle while preserving the SQL*Plus script for submission or demonstration.
+The root `schema.sql` is SQLite code used by the Flask application. `scripts/sqlite_schema.sql` is retained as a copy. The separate `oracle_schema.sql` preserves the Oracle SQL*Plus schema for submission or demonstration.
 
 ## Website pages
 
