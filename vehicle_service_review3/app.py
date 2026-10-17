@@ -195,13 +195,20 @@ def table_page(table):
                 high = ""
             filter_fields.append({"name": name, "kind": kind, "lower": low, "upper": high})
             column = safe_identifier(name)
-            if kind in ("number", "date"):
+            if kind == "date":
+                if low:
+                    where_clauses.append(f"substr(CAST({column} AS TEXT), 1, 10) >= ?")
+                    params.append(low)
+                if high:
+                    where_clauses.append(f"substr(CAST({column} AS TEXT), 1, 10) <= ?")
+                    params.append(high)
+            elif kind == "number":
                 if low:
                     where_clauses.append(f"{column} >= ?")
-                    params.append(low if kind == "date" else float(low))
+                    params.append(float(low))
                 if high:
                     where_clauses.append(f"{column} <= ?")
-                    params.append(high if kind == "date" else float(high))
+                    params.append(float(high))
             elif low:
                 where_clauses.append(f"CAST({column} AS TEXT) LIKE ?")
                 params.append(f"%{low}%")
