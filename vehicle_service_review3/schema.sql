@@ -232,6 +232,11 @@ INSERT INTO APPOINTMENT (Appointment_ID, Vehicle_ID, Mechanic_ID, Service_Type_I
 INSERT INTO APPOINTMENT (Appointment_ID, Vehicle_ID, Mechanic_ID, Service_Type_ID, Appointment_Date, Status) VALUES (708, 608, 308, 408, DATE '2026-10-08', 'Completed');
 INSERT INTO APPOINTMENT (Appointment_ID, Vehicle_ID, Mechanic_ID, Service_Type_ID, Appointment_Date, Status) VALUES (709, 609, 309, 409, DATE '2026-10-09', 'Completed');
 INSERT INTO APPOINTMENT (Appointment_ID, Vehicle_ID, Mechanic_ID, Service_Type_ID, Appointment_Date, Status) VALUES (710, 610, 310, 410, DATE '2026-10-10', 'Completed');
+INSERT INTO APPOINTMENT (Appointment_ID, Vehicle_ID, Mechanic_ID, Service_Type_ID, Appointment_Date, Status) VALUES (711, 601, 301, 402, DATE '2026-10-11', 'Completed');
+INSERT INTO APPOINTMENT (Appointment_ID, Vehicle_ID, Mechanic_ID, Service_Type_ID, Appointment_Date, Status) VALUES (712, 602, 302, 403, DATE '2026-10-12', 'Completed');
+INSERT INTO APPOINTMENT (Appointment_ID, Vehicle_ID, Mechanic_ID, Service_Type_ID, Appointment_Date, Status) VALUES (713, 603, 303, 404, DATE '2026-10-13', 'Completed');
+INSERT INTO APPOINTMENT (Appointment_ID, Vehicle_ID, Mechanic_ID, Service_Type_ID, Appointment_Date, Status) VALUES (714, 604, 304, 405, DATE '2026-10-14', 'Completed');
+INSERT INTO APPOINTMENT (Appointment_ID, Vehicle_ID, Mechanic_ID, Service_Type_ID, Appointment_Date, Status) VALUES (715, 605, 305, 406, DATE '2026-10-15', 'Completed');
 INSERT INTO PART (Part_ID, Part_Name, Category, Unit_Price, Supplier_ID) VALUES (901, 'Engine Oil', 'Lubricant', 900, 501);
 INSERT INTO PART (Part_ID, Part_Name, Category, Unit_Price, Supplier_ID) VALUES (902, 'Oil Filter', 'Filter', 350, 502);
 INSERT INTO PART (Part_ID, Part_Name, Category, Unit_Price, Supplier_ID) VALUES (903, 'Brake Pad', 'Brake', 1200, 503);
