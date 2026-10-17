@@ -177,4 +177,3 @@ INSERT INTO INVOICE (Invoice_ID, Service_ID, Total_Amount, Payment_Status) VALUE
 INSERT INTO FEEDBACK (Feedback_ID, Service_ID, Customer_ID, Rating, Comments) VALUES
 (1, 1, 1, 5, 'Good service');
 
-COMMIT;
