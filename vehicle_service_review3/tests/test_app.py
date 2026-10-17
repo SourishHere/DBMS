@@ -205,6 +205,11 @@ class VehicleServiceAppTests(unittest.TestCase):
         self.assertIn(b'name="Email" type="email"', response.data)
         self.assertNotIn(b'type="text" value="" required type="email"', response.data)
 
+    def test_sqlite_date_columns_use_date_inputs(self):
+        response = self.client.get("/table/APPOINTMENT/add")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'id="Appointment_Date" name="Appointment_Date" type="date"', response.data)
+
 
 class DemoDatabaseSetupTests(unittest.TestCase):
     def test_setup_initializes_and_recreates_demo_db_safely(self):
