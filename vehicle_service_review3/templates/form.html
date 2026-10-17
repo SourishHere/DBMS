@@ -7,7 +7,7 @@
     <div class="form-heading"><div class="table-symbol large">▤</div><div><h2>{{ mode|capitalize }} {{ table }} record</h2><p>Fields marked with * are required by the database schema.</p></div></div>
     <form method="post" class="record-form">
       {% for col in columns %}
-        {% if not (mode == 'edit' and col.pk) %}
+        {% if not (mode == 'edit' and col.pk) and not (mode == 'add' and col.identity) %}
         <div class="field">
           <label for="{{ col.name }}">{{ col.name }}{% if col.notnull and col.default is none and not col.pk %}<span class="required">*</span>{% endif %}</label>
           {% if col.fk and col.options %}
@@ -17,7 +17,7 @@
             </select>
             <small>References {{ col.fk[0] }}.{{ col.fk[1] }}</small>
           {% elif 'DATE' in col.type %}
-            <input id="{{ col.name }}" name="{{ col.name }}" type="date" value="{{ record.get(col.name, '') or '' }}" {% if col.notnull %}required{% endif %}>
+            <input id="{{ col.name }}" name="{{ col.name }}" type="date" value="{{ record.get(col.name, '')|date_input }}" {% if col.notnull %}required{% endif %}>
           {% elif 'INT' in col.type %}
             <input id="{{ col.name }}" name="{{ col.name }}" type="number" step="1" value="{{ record.get(col.name, '') if record.get(col.name, '') is not none else '' }}" {% if col.notnull %}required{% endif %}>
           {% elif 'REAL' in col.type or 'NUM' in col.type or 'DECIMAL' in col.type or 'FLOAT' in col.type %}
@@ -34,6 +34,6 @@
       <div class="form-actions"><button class="button button-primary" type="submit">{{ 'Save changes' if mode == 'edit' else 'Create record' }}</button><a class="button button-quiet" href="{{ url_for('table_page', table=table) }}">Cancel</a></div>
     </form>
   </div>
-  <aside class="form-aside"><div class="aside-icon">✓</div><h3>Database validation</h3><p>SQLite validates primary keys, unique values, foreign keys, CHECK constraints and required fields when you save.</p><div class="aside-note"><strong>Tip for your review</strong><span>Try a duplicate email or an invalid rating to demonstrate that constraints protect data integrity.</span></div></aside>
+  <aside class="form-aside"><div class="aside-icon">✓</div><h3>Database validation</h3><p>The connected database validates primary keys, unique values, foreign keys, CHECK constraints and required fields when you save.</p><div class="aside-note"><strong>Tip for your review</strong><span>Try a duplicate email or an invalid rating to demonstrate that constraints protect data integrity.</span></div></aside>
 </div>
 {% endblock %}
