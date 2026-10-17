@@ -2,11 +2,6 @@
 {% block title %}Dashboard{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 {% block content %}
-  <div class="welcome">
-    <div><div class="eyebrow light">SERVICE OPERATIONS</div><h2>Everything running smoothly.</h2><p>Manage customers, vehicles, appointments and service records from one place.</p></div>
-    <a class="button button-light" href="{{ url_for('table_page', table='APPOINTMENT') }}">View appointments <span>→</span></a>
-    <div class="welcome-orbit orbit-one"></div><div class="welcome-orbit orbit-two"></div>
-  </div>
   <div class="section-head"><div><h2>At a glance</h2><p>Live counts retrieved directly from your database.</p></div><a class="text-link" href="{{ url_for('tables_page') }}">Browse all tables →</a></div>
   <div class="stats-grid">
     <div class="stat-card"><div class="stat-icon blue">♙</div><div class="stat-label">Total customers</div><div class="stat-number">{{ customer_count }}</div><a href="{{ url_for('table_page', table='CUSTOMER') }}">Manage customers ↗</a></div>
