@@ -1,4 +1,4 @@
-# Vehicle Service & Maintenance Management System — Review 3
+# Vehicle Service & Maintenance Management System
 
 Flask web interface for the Vehicle Service & Maintenance Management System. The website runs on **SQLite**, so it can run in GitHub Codespaces without an Oracle account, wallet, cloud database, or database driver.
 
