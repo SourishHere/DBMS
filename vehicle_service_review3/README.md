@@ -1,59 +1,43 @@
 # Vehicle Service & Maintenance Management System — Review 3
 
-Flask web interface for the Oracle database schema in schema.sql. The existing dashboard, table browser, search, CRUD forms, and SQL report pages are retained.
+Flask web interface for the Vehicle Service & Maintenance Management System. The website runs on **SQLite**, so it can run in GitHub Codespaces without an Oracle account, wallet, cloud database, or database driver.
 
-## Oracle setup (recommended)
+## Run the website in GitHub Codespaces
 
-The Oracle schema uses Oracle SQL syntax and should be run in Oracle SQL*Plus or another Oracle SQL client. From the folder containing schema.sql, run:
+From this folder, run:
+
+    python -m pip install -r requirements.txt
+    python setup_demo_db.py
+    python app.py
+
+Open the forwarded port shown by Codespaces (Flask defaults to port 5000).
+
+The setup script creates `instance/vehicle_service.db` using `sqlite_schema.sql`, including the tables, view, relationships, constraints, and demo records. If you already have a demo database, the script asks before replacing it.
+
+## SQL*Plus coursework schema
+
+The file `schema.sql` is intentionally kept as the **Oracle SQL*Plus version** for DBMS coursework. Run it in Oracle SQL*Plus or another Oracle SQL client:
 
     @schema.sql
 
-The script creates the tables, the CustomerVehicleAppointment view, and demo rows. It uses MERGE for repeatable seed records and ends with COMMIT.
+It creates the Oracle tables, the `CustomerVehicleAppointment` view, and demo rows. It is not intended to be run against SQLite.
 
-Install dependencies:
-
-    python -m pip install -r requirements.txt
-
-Set these environment variables in the terminal where Flask will run. Do not put real passwords in source files or commit them to Git.
-
-    export DB_BACKEND=oracle
-    export ORACLE_USER='your_schema_username'
-    export ORACLE_PASSWORD='your_schema_password'
-    export ORACLE_DSN='hostname:1521/service_name'
-    export FLASK_SECRET_KEY='a-long-random-secret'
-    python app.py
-
-ORACLE_DSN must point to an Oracle database that the Codespace can reach. localhost means the Codespace itself, not your personal computer. If Oracle runs only on your laptop or a college LAN that Codespaces cannot reach, use an approved reachable Oracle instance or network connection.
-
-For persistent configuration in GitHub Codespaces, add ORACLE_USER, ORACLE_PASSWORD, ORACLE_DSN, DB_BACKEND, and FLASK_SECRET_KEY as Codespaces secrets/environment variables. Never commit .env or credentials.
-
-Open the forwarded Flask port shown by Codespaces. The /health endpoint reports the selected backend and accessible table list.
-
-## Database backend modes
-
-- DB_BACKEND=oracle — uses python-oracledb and the Oracle schema.
-- DB_BACKEND=sqlite (default) — keeps compatibility with an existing local instance/vehicle_service.db database.
-
-The Oracle mode reads tables and column/foreign-key metadata from Oracle's USER_* data dictionary views. CRUD statements use bound parameters; Oracle identity columns are omitted on insert when blank; HTML date inputs are converted to Python date values before Oracle binding. Database constraints remain responsible for enforcing uniqueness, required fields, CHECK constraints, and foreign keys.
+The website's separate `sqlite_schema.sql` contains the SQLite-compatible version used by the Flask application. Keeping these files separate allows the website to run without Oracle while preserving the SQL*Plus script for submission or demonstration.
 
 ## Website pages
 
-- Dashboard — live table counts and recent appointments.
-- Tables — list of tables and their columns/row counts.
-- Manage table — view/search up to 250 records, add/edit/delete rows. Foreign-key fields offer existing related records where possible.
-- SQL reports — JOIN, WHERE + ORDER BY, GROUP BY + HAVING, aggregates, a subquery, and the project view.
+- **Dashboard** — table counts and recent appointments.
+- **Tables** — list of tables, columns, and row counts.
+- **Manage table** — view/search up to 250 records and add, edit, or delete rows. Foreign-key fields offer existing related records where possible.
+- **SQL reports** — JOIN, WHERE + ORDER BY, GROUP BY + HAVING, aggregates, a subquery, and the project view.
+- **Health** — visit `/health` to see the SQLite database path, backend, table list, and foreign-key check count.
 
-Tables with composite primary keys (such as SERVICE_PART) are viewable/searchable; generic edit/delete is disabled for safety.
-
-## Local SQLite fallback
-
-The SQLite backend uses instance/vehicle_service.db by default, or the path in VEHICLE_DB_PATH. schema.sql is Oracle SQL and is not a SQLite schema; do not run the Oracle file through a SQLite setup script. The SQLite database is local and ignored by Git.
+Tables with composite primary keys (such as `SERVICE_PART`) can be viewed and searched; generic edit/delete is disabled for safety.
 
 ## Troubleshooting
 
-- Oracle driver missing: run python -m pip install -r requirements.txt.
-- Missing Oracle configuration: confirm DB_BACKEND, ORACLE_USER, ORACLE_PASSWORD, and ORACLE_DSN are set in the same terminal/session running Flask.
-- Connection refused / timeout: confirm the DSN is reachable from Codespaces and the database listener allows that connection.
-- Foreign-key/unique/check error: choose an existing related row or correct the value; Oracle is enforcing the schema constraints.
-- Port 5000 in use: use flask run --port 5001 or change the app's run port.
+- **Flask missing:** run `python -m pip install -r requirements.txt`.
+- **Database file missing:** run `python setup_demo_db.py`.
+- **Existing database:** the setup script asks before replacing it; type `YES` only if you want to recreate the demo database and replace its contents.
+- **Port 5000 in use:** run with `flask --app app run --port 5001`.
 - This is an academic prototype. Keep Flask debug mode disabled unless actively debugging locally.
