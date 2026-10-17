@@ -42,7 +42,7 @@ class VehicleServiceAppTests(unittest.TestCase):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"<h1>Dashboard</h1>", response.data)
-        self.assertIn(b"Arun Kumar", response.data)
+        self.assertIn(b"Meera Iyer", response.data)
 
     def test_tables_page_loads(self):
         response = self.client.get("/tables")
