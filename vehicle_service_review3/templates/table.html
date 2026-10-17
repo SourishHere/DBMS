@@ -11,8 +11,23 @@
   <form method="get" class="column-filter-form">
     {% if search %}<input type="hidden" name="q" value="{{ search }}">{% endif %}
     <div class="column-filter-grid">
-      {% for col in columns %}
-      <label>{{ col }}<input type="search" name="filter_{{ col }}" value="{{ column_filters[col] }}" placeholder="Search {{ col }}"></label>
+      {% for field in filter_fields %}
+      <div class="column-filter-field">
+        <label>{{ field.name }}</label>
+        {% if field.kind == "number" %}
+        <div class="range-inputs">
+          <input type="number" step="any" name="filter_min_{{ field.name }}" value="{{ field.lower }}" placeholder="Min" aria-label="{{ field.name }} minimum">
+          <input type="number" step="any" name="filter_max_{{ field.name }}" value="{{ field.upper }}" placeholder="Max" aria-label="{{ field.name }} maximum">
+        </div>
+        {% elif field.kind == "date" %}
+        <div class="range-inputs">
+          <input type="date" name="filter_from_{{ field.name }}" value="{{ field.lower }}" aria-label="{{ field.name }} from date">
+          <input type="date" name="filter_to_{{ field.name }}" value="{{ field.upper }}" aria-label="{{ field.name }} to date">
+        </div>
+        {% else %}
+        <input type="search" name="filter_{{ field.name }}" value="{{ field.lower }}" placeholder="Search {{ field.name }}">
+        {% endif %}
+      </div>
       {% endfor %}
     </div>
     <div class="column-filter-actions"><button class="button button-dark" type="submit">Apply filters</button><a class="button button-quiet" href="{{ url_for('table_page', table=table) }}">Clear filters</a></div>
