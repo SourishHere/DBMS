@@ -195,6 +195,14 @@ def table_page(table):
                 high = ""
             filter_fields.append({"name": name, "kind": kind, "lower": low, "upper": high})
             column = safe_identifier(name)
+            if kind in ("date", "number") and low and high:
+                try:
+                    reversed_range = low > high if kind == "date" else float(low) > float(high)
+                except ValueError:
+                    reversed_range = True
+                if reversed_range:
+                    flash(f"Invalid range for {name}: the minimum/from value cannot be greater than the maximum/to value.", "error")
+                    continue
             if kind == "date":
                 if low:
                     where_clauses.append(f"substr(CAST({column} AS TEXT), 1, 10) >= ?")
@@ -203,12 +211,17 @@ def table_page(table):
                     where_clauses.append(f"substr(CAST({column} AS TEXT), 1, 10) <= ?")
                     params.append(high)
             elif kind == "number":
-                if low:
-                    where_clauses.append(f"{column} >= ?")
-                    params.append(float(low))
-                if high:
-                    where_clauses.append(f"{column} <= ?")
-                    params.append(float(high))
+                try:
+                    if low:
+                        where_clauses.append(f"{column} >= ?")
+                        params.append(float(low))
+                    if high:
+                        where_clauses.append(f"{column} <= ?")
+                        params.append(float(high))
+                except ValueError:
+                    flash(f"Invalid numeric range for {name}. Enter valid minimum and maximum numbers.", "error")
+                    where_clauses = []
+                    params = []
             elif low:
                 where_clauses.append(f"CAST({column} AS TEXT) LIKE ?")
                 params.append(f"%{low}%")
