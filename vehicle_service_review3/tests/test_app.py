@@ -69,6 +69,45 @@ class VehicleServiceAppTests(unittest.TestCase):
         self.assertIn(b"Arun Kumar", response.data)
         self.assertNotIn(b"Priya Sharma", response.data)
 
+    def test_reuses_deleted_highest_customer_id(self):
+        first = self.client.post(
+            "/table/CUSTOMER/add",
+            data={
+                "Customer_Name": "Temporary Customer",
+                "Phone": "9876500098",
+                "Email": "temporary.customer@example.com",
+                "Address": "Vellore",
+            },
+        )
+        self.assertEqual(first.status_code, 302)
+        with self.db() as conn:
+            first_id = conn.execute(
+                "SELECT Customer_ID FROM CUSTOMER WHERE Email = ?",
+                ("temporary.customer@example.com",),
+            ).fetchone()["Customer_ID"]
+
+        deleted = self.client.post(f"/table/CUSTOMER/delete/{first_id}")
+        self.assertEqual(deleted.status_code, 302)
+
+        second = self.client.post(
+            "/table/CUSTOMER/add",
+            data={
+                "Customer_Name": "Replacement Customer",
+                "Phone": "9876500097",
+                "Email": "replacement.customer@example.com",
+                "Address": "Vellore",
+            },
+        )
+        self.assertEqual(second.status_code, 302)
+        with self.db() as conn:
+            second_id = conn.execute(
+                "SELECT Customer_ID FROM CUSTOMER WHERE Email = ?",
+                ("replacement.customer@example.com",),
+            ).fetchone()["Customer_ID"]
+
+        self.assertEqual(first_id, 111)
+        self.assertEqual(second_id, first_id)
+
     def test_add_and_edit_customer(self):
         response = self.client.post(
             "/table/CUSTOMER/add",
