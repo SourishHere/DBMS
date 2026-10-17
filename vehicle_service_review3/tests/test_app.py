@@ -1,5 +1,7 @@
 import os
+import shutil
 import sqlite3
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -195,6 +197,61 @@ class VehicleServiceAppTests(unittest.TestCase):
 
     def test_delete_endpoint_rejects_get(self):
         self.assertEqual(self.client.get("/table/CUSTOMER/delete/1").status_code, 405)
+
+
+    def test_email_field_uses_email_input_type(self):
+        response = self.client.get("/table/CUSTOMER/add")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'name="Email" type="email"', response.data)
+        self.assertNotIn(b'type="text" value="" required type="email"', response.data)
+
+
+class DemoDatabaseSetupTests(unittest.TestCase):
+    def test_setup_initializes_and_recreates_demo_db_safely(self):
+        with tempfile.TemporaryDirectory(prefix="vehicle-setup-test-") as temp:
+            root = Path(temp)
+            shutil.copy2(BASE / "setup_demo_db.py", root / "setup_demo_db.py")
+            shutil.copy2(SCHEMA, root / "sqlite_schema.sql")
+            db_path = root / "instance" / "vehicle_service.db"
+
+            first = subprocess.run(
+                [sys.executable, str(root / "setup_demo_db.py")],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+            self.assertTrue(db_path.exists())
+            with sqlite3.connect(db_path) as conn:
+                self.assertEqual(conn.execute("SELECT COUNT(*) FROM CUSTOMER").fetchone()[0], 2)
+                conn.execute(
+                    "INSERT INTO CUSTOMER (Customer_Name, Phone, Email) VALUES (?, ?, ?)",
+                    ("Preserve Me", "9876500099", "preserve@example.com"),
+                )
+
+            refused = subprocess.run(
+                [sys.executable, str(root / "setup_demo_db.py")],
+                input="NO\\n",
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(refused.returncode, 0, refused.stdout + refused.stderr)
+            self.assertIn("Cancelled", refused.stdout)
+            with sqlite3.connect(db_path) as conn:
+                self.assertEqual(conn.execute("SELECT COUNT(*) FROM CUSTOMER").fetchone()[0], 3)
+
+            recreated = subprocess.run(
+                [sys.executable, str(root / "setup_demo_db.py")],
+                input="YES\\n",
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(recreated.returncode, 0, recreated.stdout + recreated.stderr)
+            with sqlite3.connect(db_path) as conn:
+                self.assertEqual(conn.execute("SELECT COUNT(*) FROM CUSTOMER").fetchone()[0], 2)
+                self.assertEqual(conn.execute("PRAGMA foreign_key_check").fetchall(), [])
 
 
 if __name__ == "__main__":
