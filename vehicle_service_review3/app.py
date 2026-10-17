@@ -175,13 +175,36 @@ def table_page(table):
         cols = columns_for(conn, table)
         pk = primary_key(cols)
         colnames = [c["name"] for c in cols]
-        column_filters = {
-            name: request.args.get(f"filter_{name}", "").strip()
-            for name in colnames
-        }
-        active_filters = [(name, value) for name, value in column_filters.items() if value]
+        filter_fields = []
         where_clauses = []
         params = []
+        for col in cols:
+            name = col["name"]
+            typ = (col["type"] or "").upper()
+            if "DATE" in typ or "TIME" in typ:
+                kind = "date"
+                low = request.args.get(f"filter_from_{name}", "").strip()
+                high = request.args.get(f"filter_to_{name}", "").strip()
+            elif any(t in typ for t in ("INT", "REAL", "FLOAT", "DOUBLE", "NUM", "DEC")):
+                kind = "number"
+                low = request.args.get(f"filter_min_{name}", "").strip()
+                high = request.args.get(f"filter_max_{name}", "").strip()
+            else:
+                kind = "text"
+                low = request.args.get(f"filter_{name}", "").strip()
+                high = ""
+            filter_fields.append({"name": name, "kind": kind, "lower": low, "upper": high})
+            column = safe_identifier(name)
+            if kind in ("number", "date"):
+                if low:
+                    where_clauses.append(f"{column} >= ?")
+                    params.append(low if kind == "date" else float(low))
+                if high:
+                    where_clauses.append(f"{column} <= ?")
+                    params.append(high if kind == "date" else float(high))
+            elif low:
+                where_clauses.append(f"CAST({column} AS TEXT) LIKE ?")
+                params.append(f"%{low}%")
 
         if search:
             searchable = [
@@ -195,10 +218,6 @@ def table_page(table):
                 ) + ")")
                 params.extend([f"%{search}%"] * len(searchable))
 
-        for name, value in active_filters:
-            where_clauses.append(f"CAST({safe_identifier(name)} AS TEXT) LIKE ?")
-            params.append(f"%{value}%")
-
         sql = f"SELECT * FROM {safe_identifier(table)}"
         if where_clauses:
             sql += " WHERE " + " AND ".join(where_clauses)
@@ -207,8 +226,8 @@ def table_page(table):
         fk_errors = foreign_key_issue_count(conn)
     return render_template(
         "table.html", table=table, columns=colnames, rows=rows,
-        pk=pk, search=search, column_filters=column_filters,
-        has_column_filters=bool(active_filters), total=len(rows),
+        pk=pk, search=search, filter_fields=filter_fields,
+        has_column_filters=any(f["lower"] or f["upper"] for f in filter_fields), total=len(rows),
         fk_error_count=fk_errors
     )
 
