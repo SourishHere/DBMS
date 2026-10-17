@@ -7,7 +7,7 @@
     <a class="button button-light" href="{{ url_for('table_page', table='APPOINTMENT') }}">View appointments <span>→</span></a>
     <div class="welcome-orbit orbit-one"></div><div class="welcome-orbit orbit-two"></div>
   </div>
-  <div class="section-head"><div><h2>At a glance</h2><p>Live counts retrieved directly from your SQLite database.</p></div><a class="text-link" href="{{ url_for('tables_page') }}">Browse all tables →</a></div>
+  <div class="section-head"><div><h2>At a glance</h2><p>Live counts retrieved directly from your connected database.</p></div><a class="text-link" href="{{ url_for('tables_page') }}">Browse all tables →</a></div>
   <div class="stats-grid">
     <div class="stat-card"><div class="stat-icon blue">♙</div><div class="stat-label">Total customers</div><div class="stat-number">{{ customer_count }}</div><a href="{{ url_for('table_page', table='CUSTOMER') }}">Manage customers ↗</a></div>
     <div class="stat-card"><div class="stat-icon violet">▣</div><div class="stat-label">Registered vehicles</div><div class="stat-number">{{ vehicle_count }}</div><a href="{{ url_for('table_page', table='VEHICLE') }}">Manage vehicles ↗</a></div>
