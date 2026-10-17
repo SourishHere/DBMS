@@ -16,7 +16,7 @@
               {% for option in col.options %}<option value="{{ option.value }}" {% if record.get(col.name, '')|string == option.value|string %}selected{% endif %}>{{ option.value }} — {{ option.label }}</option>{% endfor %}
             </select>
             <small>References {{ col.fk[0] }}.{{ col.fk[1] }}</small>
-          {% elif 'DATE' in col.type %}
+          {% elif 'DATE' in col.type or col.name.lower().endswith('_date') or col.name.lower() == 'last_updated' %}
             <input id="{{ col.name }}" name="{{ col.name }}" type="date" value="{{ record.get(col.name, '')|date_input }}" {% if col.notnull %}required{% endif %}>
           {% elif 'INT' in col.type %}
             <input id="{{ col.name }}" name="{{ col.name }}" type="number" step="1" value="{{ record.get(col.name, '') if record.get(col.name, '') is not none else '' }}" {% if col.notnull %}required{% endif %}>
