@@ -228,7 +228,12 @@ INSERT INTO APPOINTMENT (Appointment_ID, Vehicle_ID, Mechanic_ID, Service_Type_I
 (707, 607, 307, 407, '2026-10-07', 'Completed'),
 (708, 608, 308, 408, '2026-10-08', 'Completed'),
 (709, 609, 309, 409, '2026-10-09', 'Completed'),
-(710, 610, 310, 410, '2026-10-10', 'Completed');
+(710, 610, 310, 410, '2026-10-10', 'Completed'),
+(711, 601, 301, 402, '2026-10-11', 'Completed'),
+(712, 602, 302, 403, '2026-10-12', 'Completed'),
+(713, 603, 303, 404, '2026-10-13', 'Completed'),
+(714, 604, 304, 405, '2026-10-14', 'Completed'),
+(715, 605, 305, 406, '2026-10-15', 'Completed');
 
 INSERT INTO PART (Part_ID, Part_Name, Category, Unit_Price, Supplier_ID) VALUES
 (901, 'Engine Oil', 'Lubricant', 900, 501),
