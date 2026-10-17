@@ -3,7 +3,7 @@ import sqlite3
 
 ROOT = Path(__file__).resolve().parent
 db_path = ROOT / "instance" / "vehicle_service.db"
-schema_path = ROOT / "schema.sql"
+schema_path = ROOT / "scripts" / "sqlite_schema.sql"
 db_path.parent.mkdir(exist_ok=True)
 
 if db_path.exists():
