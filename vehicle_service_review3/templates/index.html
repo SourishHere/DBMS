@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard overview{% endblock %}
+{% block content %}
+  <div class="welcome">
+    <div><div class="eyebrow light">SERVICE OPERATIONS</div><h2>Everything running smoothly.</h2><p>Manage customers, vehicles, appointments and service records from one workspace.</p></div>
+    <a class="button button-light" href="{{ url_for('table_page', table='APPOINTMENT') }}">View appointments <span>→</span></a>
+    <div class="welcome-orbit orbit-one"></div><div class="welcome-orbit orbit-two"></div>
+  </div>
+  <div class="section-head"><div><h2>At a glance</h2><p>Live counts retrieved directly from your SQLite database.</p></div><a class="text-link" href="{{ url_for('tables_page') }}">Browse all tables →</a></div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-icon blue">♙</div><div class="stat-label">Total customers</div><div class="stat-number">{{ customer_count }}</div><a href="{{ url_for('table_page', table='CUSTOMER') }}">Manage customers ↗</a></div>
+    <div class="stat-card"><div class="stat-icon violet">▣</div><div class="stat-label">Registered vehicles</div><div class="stat-number">{{ vehicle_count }}</div><a href="{{ url_for('table_page', table='VEHICLE') }}">Manage vehicles ↗</a></div>
+    <div class="stat-card"><div class="stat-icon orange">▦</div><div class="stat-label">Appointments</div><div class="stat-number">{{ appointment_count }}</div><a href="{{ url_for('table_page', table='APPOINTMENT') }}">Manage appointments ↗</a></div>
+    <div class="stat-card"><div class="stat-icon green">✓</div><div class="stat-label">Completed services</div><div class="stat-number">{{ completed }}</div><a href="{{ url_for('reports') }}">View SQL reports ↗</a></div>
+  </div>
+  <div class="section-head"><div><h2>Recent appointments</h2><p>Latest records from joined customer, vehicle and appointment data.</p></div><a class="text-link" href="{{ url_for('table_page', table='APPOINTMENT') }}">All appointments →</a></div>
+  <div class="panel">
+    {% if recent.error %}<div class="empty-state"><div class="empty-icon">⌁</div><h3>Appointment summary unavailable</h3><p>{{ recent.error }} Confirm that the database contains CUSTOMER, VEHICLE and APPOINTMENT with the expected columns.</p></div>
+    {% elif recent.rows %}
+      <div class="table-wrap"><table><thead><tr><th>Appointment</th><th>Customer</th><th>Vehicle</th><th>Date</th><th>Status</th></tr></thead><tbody>
+      {% for r in recent.rows %}<tr><td class="mono">#{{ r.Appointment_ID }}</td><td class="strong">{{ r.Customer_Name }}</td><td>{{ r.Registration_No }}</td><td>{{ r.Appointment_Date }}</td><td><span class="badge {% if r.Status == 'Completed' %}badge-green{% elif r.Status == 'Cancelled' %}badge-red{% else %}badge-blue{% endif %}">{{ r.Status }}</span></td></tr>{% endfor %}
+      </tbody></table></div>
+    {% else %}<div class="empty-state"><div class="empty-icon">▦</div><h3>No appointments yet</h3><p>Add an appointment to see live records here.</p><a class="button button-primary" href="{{ url_for('table_page', table='APPOINTMENT') }}">Open appointments</a></div>{% endif %}
+  </div>
+  <div class="bottom-grid">
+    <div class="panel feature-panel"><div class="feature-icon">⌘</div><div><h3>Database workspace</h3><p>Manage all tables with dynamic forms, search and record-level actions.</p><a class="text-link" href="{{ url_for('tables_page') }}">Open tables →</a></div></div>
+    <div class="panel feature-panel"><div class="feature-icon feature-purple">⌁</div><div><h3>SQL query lab</h3><p>Demonstrate joins, subqueries, grouping, filtering and aggregate functions.</p><a class="text-link" href="{{ url_for('reports') }}">Run reports →</a></div></div>
+  </div>
+{% endblock %}

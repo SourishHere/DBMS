@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ mode|capitalize }} {{ table }}{% endblock %}
+{% block page_title %}{{ mode|capitalize }} record{% endblock %}
+{% block content %}
+<div class="form-layout">
+  <div class="form-main panel">
+    <div class="form-heading"><div class="table-symbol large">▤</div><div><h2>{{ mode|capitalize }} {{ table }} record</h2><p>Fields marked with * are required by the database schema.</p></div></div>
+    <form method="post" class="record-form">
+      {% for col in columns %}
+        {% if not (mode == 'edit' and col.pk) %}
+        <div class="field">
+          <label for="{{ col.name }}">{{ col.name }}{% if col.notnull and col.default is none and not col.pk %}<span class="required">*</span>{% endif %}</label>
+          {% if col.fk and col.options %}
+            <select id="{{ col.name }}" name="{{ col.name }}" {% if col.notnull %}required{% endif %}>
+              <option value="">Choose related record{% if not col.notnull %} (optional){% endif %}</option>
+              {% for option in col.options %}<option value="{{ option.value }}" {% if record.get(col.name, '')|string == option.value|string %}selected{% endif %}>{{ option.value }} — {{ option.label }}</option>{% endfor %}
+            </select>
+            <small>References {{ col.fk[0] }}.{{ col.fk[1] }}</small>
+          {% elif 'DATE' in col.type %}
+            <input id="{{ col.name }}" name="{{ col.name }}" type="date" value="{{ record.get(col.name, '') or '' }}" {% if col.notnull %}required{% endif %}>
+          {% elif 'INT' in col.type %}
+            <input id="{{ col.name }}" name="{{ col.name }}" type="number" step="1" value="{{ record.get(col.name, '') if record.get(col.name, '') is not none else '' }}" {% if col.notnull %}required{% endif %}>
+          {% elif 'REAL' in col.type or 'NUM' in col.type or 'DECIMAL' in col.type or 'FLOAT' in col.type %}
+            <input id="{{ col.name }}" name="{{ col.name }}" type="number" step="any" value="{{ record.get(col.name, '') if record.get(col.name, '') is not none else '' }}" {% if col.notnull %}required{% endif %}>
+          {% elif col.name|lower in ['notes','address','description','comments','details','specialization'] %}
+            <textarea id="{{ col.name }}" name="{{ col.name }}" rows="3" {% if col.notnull %}required{% endif %}>{{ record.get(col.name, '') or '' }}</textarea>
+          {% else %}
+            <input id="{{ col.name }}" name="{{ col.name }}" type="text" value="{{ record.get(col.name, '') or '' }}" {% if col.notnull %}required{% endif %} {% if col.name|lower == 'email' %}type="email"{% endif %}>
+          {% endif %}
+          {% if col.default is not none %}<small>Database default: {{ col.default }}</small>{% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
+      <div class="form-actions"><button class="button button-primary" type="submit">{{ 'Save changes' if mode == 'edit' else 'Create record' }}</button><a class="button button-quiet" href="{{ url_for('table_page', table=table) }}">Cancel</a></div>
+    </form>
+  </div>
+  <aside class="form-aside"><div class="aside-icon">✓</div><h3>Database validation</h3><p>SQLite validates primary keys, unique values, foreign keys, CHECK constraints and required fields when you save.</p><div class="aside-note"><strong>Tip for your review</strong><span>Try a duplicate email or an invalid rating to demonstrate that constraints protect data integrity.</span></div></aside>
+</div>
+{% endblock %}

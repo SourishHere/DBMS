@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Database tables{% endblock %}
+{% block page_title %}Database tables{% endblock %}
+{% block content %}
+<div class="page-intro"><div><h2>Your relational schema</h2><p>Choose a table to browse records and perform CRUD operations. Counts are read from SQLite.</p></div></div>
+<div class="table-cards">
+{% for item in items %}
+  <a class="table-card" href="{{ url_for('table_page', table=item.name) }}">
+    <div class="table-card-top"><span class="table-symbol">▤</span><span class="row-count">{{ item.rows }} rows</span></div>
+    <h3>{{ item.name }}</h3><p>{{ item.columns }} columns{% if item.pk %} · PK: {{ item.pk }}{% else %} · composite/no single PK{% endif %}</p><span class="open-link">Open table <span>→</span></span>
+  </a>
+{% endfor %}
+</div>
+{% if not items %}<div class="empty-state"><h3>No tables found</h3><p>Connect a SQLite database that contains your project schema, or create the demo database.</p></div>{% endif %}
+{% endblock %}
