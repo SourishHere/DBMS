@@ -17,7 +17,7 @@
     {% for table_name in nav_tables %}
       <a class="table-nav" href="{{ url_for('table_page', table=table_name) }}">{{ table_name }}</a>
     {% endfor %}
-    <div class="sidebar-bottom"><span class="online-dot"></span> SQLite connection enabled <small>Local review prototype</small></div>
+    <div class="sidebar-bottom"><span class="online-dot"></span> {{ db_backend|upper }} connection enabled <small>Database-backed review prototype</small></div>
   </aside>
   <main class="main">
     <header class="topbar">
