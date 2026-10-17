@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1]
-SCHEMA = BASE / "scripts" / "sqlite_schema.sql"
+SCHEMA = BASE / "schema.sql"
 TEMP_DIR = tempfile.TemporaryDirectory(prefix="vehicle-service-tests-")
 os.environ["VEHICLE_DB_PATH"] = str(Path(TEMP_DIR.name) / "test_vehicle_service.db")
 sys.path.insert(0, str(BASE))
