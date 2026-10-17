@@ -216,8 +216,7 @@ class DemoDatabaseSetupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="vehicle-setup-test-") as temp:
             root = Path(temp)
             shutil.copy2(BASE / "setup_demo_db.py", root / "setup_demo_db.py")
-            (root / "scripts").mkdir()
-            shutil.copy2(SCHEMA, root / "scripts" / "sqlite_schema.sql")
+            shutil.copy2(SCHEMA, root / "schema.sql")
             db_path = root / "instance" / "vehicle_service.db"
 
             first = subprocess.run(
