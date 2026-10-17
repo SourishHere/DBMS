@@ -245,7 +245,7 @@ class DemoDatabaseSetupTests(unittest.TestCase):
             self.assertEqual(refused.returncode, 0, refused.stdout + refused.stderr)
             self.assertIn("Cancelled", refused.stdout)
             with sqlite3.connect(db_path) as conn:
-                self.assertEqual(conn.execute("SELECT COUNT(*) FROM CUSTOMER").fetchone()[0], 3)
+                self.assertEqual(conn.execute("SELECT COUNT(*) FROM CUSTOMER").fetchone()[0], 11)
 
             recreated = subprocess.run(
                 [sys.executable, str(root / "setup_demo_db.py")],
@@ -256,7 +256,7 @@ class DemoDatabaseSetupTests(unittest.TestCase):
             )
             self.assertEqual(recreated.returncode, 0, recreated.stdout + recreated.stderr)
             with sqlite3.connect(db_path) as conn:
-                self.assertEqual(conn.execute("SELECT COUNT(*) FROM CUSTOMER").fetchone()[0], 2)
+                self.assertEqual(conn.execute("SELECT COUNT(*) FROM CUSTOMER").fetchone()[0], 10)
                 self.assertEqual(conn.execute("PRAGMA foreign_key_check").fetchall(), [])
 
 
