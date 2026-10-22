@@ -48,7 +48,7 @@ def value_for(raw, field):
  if any(x in typ for x in ("int","decimal","float","double")):
   try: return Decimal(raw) if any(x in typ for x in ("decimal","float","double")) else int(raw)
   except (ValueError,InvalidOperation): raise ValueError("Enter a valid number for "+field["name"])
- if "datetime-local" in typ: return raw.replace("T"," ")
+ if "datetime" in typ and "T" in raw: return raw.replace("T"," ")
  return raw
 
 @app.route("/")
