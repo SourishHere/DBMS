@@ -1,9 +1,7 @@
 CREATE DATABASE IF NOT EXISTS vehicle_service CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE vehicle_service;
-SET FOREIGN_KEY_CHECKS=0;
-DROP VIEW IF EXISTS CustomerVehicleAppointment;
-DROP TABLE IF EXISTS FEEDBACK,WARRANTY,PAYMENT,INVOICE,INVENTORY,SERVICE_PART,PART,SUPPLIER,SERVICE_RECORD,APPOINTMENT,SERVICE_TYPE,MECHANIC,VEHICLE,VEHICLE_MODEL,CUSTOMER;
-SET FOREIGN_KEY_CHECKS=1;
+-- Fresh demo schema: run this on a new/empty vehicle_service database.
+-- Do not rerun the script after tables contain data; it intentionally avoids dropping existing tables.
 
 CREATE TABLE CUSTOMER(Customer_ID INT AUTO_INCREMENT PRIMARY KEY,Customer_Name VARCHAR(100) NOT NULL,Phone VARCHAR(20) NOT NULL,Email VARCHAR(255) UNIQUE,Address VARCHAR(250));
 CREATE TABLE VEHICLE_MODEL(Model_ID INT AUTO_INCREMENT PRIMARY KEY,Brand VARCHAR(100) NOT NULL,Model_Name VARCHAR(100) NOT NULL,Fuel_Type ENUM('Petrol','Diesel','Electric','Hybrid','CNG') NOT NULL DEFAULT 'Petrol',Vehicle_Type ENUM('Car','Bike','SUV','Truck','Van','Hatchback','Sedan','MUV') NOT NULL DEFAULT 'Car',UNIQUE(Brand,Model_Name));
